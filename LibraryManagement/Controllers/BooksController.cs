@@ -52,20 +52,22 @@ public class BooksController : ControllerBase
     {
         var book = await _bookRepository.GetByIdAsync(id);
 
-        if (book == null)
+        if (book==null)
         {
             return NotFound(new
             {
-                message = "Book not found."
+                message = "The Book  You Searching was not found."
             });
         }
 
+
+        //this is to map the book entity to the BookResponseDto
         var result = new BookResponseDto
         {
-            BookId = book.BookId,
-            Title = book.Title,
-            ISBN = book.ISBN,
-            AuthorId = book.AuthorId,
+            BookId=book.BookId,
+            Title=book.Title,
+            ISBN=book.ISBN,
+            AuthorId=book.AuthorId,
             AuthorName = book.Author.AuthorName,
             CategoryId = book.CategoryId,
             CategoryName = book.Category.CategoryName,
