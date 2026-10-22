@@ -96,8 +96,14 @@ namespace LibraryManagement.Migrations
                     b.Property<DateTime>("BorrowDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("MemberId")
+                    b.Property<string>("MemberEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("MemberId")
                         .HasColumnType("int");
+
+                    b.Property<string>("MemberName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ReturnDate")
                         .HasColumnType("datetime2");
@@ -201,8 +207,7 @@ namespace LibraryManagement.Migrations
                     b.HasOne("LibraryManagement.Models.User", "Member")
                         .WithMany("BorrowTransactions")
                         .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Book");
 

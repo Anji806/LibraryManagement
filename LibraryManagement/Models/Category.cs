@@ -6,6 +6,6 @@ public class Category
 
     public string CategoryName { get; set; } = string.Empty;
 
-    public ICollection<Book> Books { get; set; }
+    public ICollection<Book> Books { get; set;}
         = new List<Book>();
 }

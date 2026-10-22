@@ -56,6 +56,6 @@ public class ApplicationDbContext : DbContext
             .HasOne(x => x.Member)
             .WithMany(x => x.BorrowTransactions)
             .HasForeignKey(x => x.MemberId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

@@ -33,7 +33,7 @@ public class CategoriesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetCategory(int id)
     {
-        var category =
+        var category = 
             await _categoryRepository.GetByIdAsync(id);
 
         if (category == null)

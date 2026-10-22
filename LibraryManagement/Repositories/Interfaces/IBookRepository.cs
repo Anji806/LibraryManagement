@@ -16,7 +16,7 @@ public interface IBookRepository
 
     void Delete(Book book);
 
-    Task<bool> HasActiveBorrowingsAsync(int bookId);
+    Task<bool> HasBorrowHistoryAsync(int bookId);
 
     Task<bool> ExistsAsync(int bookId);
 
