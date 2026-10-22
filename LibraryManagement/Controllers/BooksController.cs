@@ -3,11 +3,13 @@ using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,Librarian,Member")]
 public class BooksController : ControllerBase
 {
   
@@ -23,7 +25,6 @@ public class BooksController : ControllerBase
     }
     // GET: api/books
     [HttpGet]
-    [AllowAnonymous]
     public async Task<IActionResult> GetBooks()
     {
         var books = await _bookRepository.GetAllAsync();
@@ -47,12 +48,11 @@ public class BooksController : ControllerBase
 
     // GET: api/books/1
     [HttpGet("{id:int}")]
-    [AllowAnonymous]
     public async Task<IActionResult> GetBook(int id)
     {
         var book = await _bookRepository.GetByIdAsync(id);
 
-        if (book==null)
+        if (book==null) //
         {
             return NotFound(new
             {
@@ -80,7 +80,7 @@ public class BooksController : ControllerBase
     }
     // GET: api/books/1/borrow-history
     [HttpGet("{bookId:int}/borrow-history")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin,Librarian")]
     public async Task<IActionResult> GetBorrowHistory(
         int bookId)
     {
@@ -93,7 +93,6 @@ public class BooksController : ControllerBase
 
     // GET: api/books/search?title=dotnet
     [HttpGet("search")]
-    [AllowAnonymous]
     public async Task<IActionResult> Search([FromQuery] string title)
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -215,21 +214,33 @@ public class BooksController : ControllerBase
             });
         }
 
-        bool hasActiveBorrowing =
-            await _bookRepository.HasActiveBorrowingsAsync(id);
+        bool hasBorrowHistory =
+            await _bookRepository.HasBorrowHistoryAsync(id);
 
-        if (hasActiveBorrowing)
+        if (hasBorrowHistory)
         {
             return Conflict(new
             {
                 message =
-                    "Book cannot be deleted because it has an active borrowing."
+                    "This book cannot be deleted because it has borrowing history."
             });
         }
 
-        _bookRepository.Delete(book);
+        try
+        {
+            _bookRepository.Delete(book);
 
-        await _bookRepository.SaveChangesAsync();
+            await _bookRepository.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            // A borrowing may have been created after the check above.
+            return Conflict(new
+            {
+                message =
+                    "This book cannot be deleted because it is referenced by other records."
+            });
+        }
 
         return NoContent();
     }

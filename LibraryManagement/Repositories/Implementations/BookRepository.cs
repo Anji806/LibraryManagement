@@ -56,12 +56,10 @@ public class BookRepository : IBookRepository
         _context.Books.Remove(book);
     }
 
-    public async Task<bool> HasActiveBorrowingsAsync(int bookId)
+    public async Task<bool> HasBorrowHistoryAsync(int bookId)
     {
         return await _context.BorrowTransactions
-            .AnyAsync(x =>
-                x.BookId == bookId &&
-                x.Status == "Borrowed");
+            .AnyAsync(x => x.BookId == bookId);
     }
 
     public async Task<bool> ExistsAsync(int bookId)
