@@ -24,6 +24,8 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
     // POST: api/auth/refresh
+    // Refresh token endpoint
+
 
     // POST: api/auth/login
     [HttpPost("login")]
