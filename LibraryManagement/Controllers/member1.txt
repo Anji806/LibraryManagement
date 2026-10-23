@@ -10,3 +10,4 @@ My tasks:
 - Stage this file
 - Commit the changes
 - Push the branch to GitHub
+-then merged to the main to see the changes
