@@ -1,52 +1,99 @@
-﻿using LibraryManagement.Data;
+using Dapper;
+using LibraryManagement.Data;
 using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Repositories.Implementations;
 
 public class CategoryRepository : ICategoryRepository
 {
-    private readonly ApplicationDbContext _context;
+    private const string BookColumns =
+        "BookId, Title, ISBN, AuthorId, CategoryId, TotalCopies, AvailableCopies, PublishedYear";
 
-    public CategoryRepository(ApplicationDbContext context)
+    private readonly IDapperUnitOfWork _uow;
+
+    public CategoryRepository(IDapperUnitOfWork uow)
     {
-        _context = context;
+        _uow = uow;
     }
 
     public async Task<List<Category>> GetAllAsync()
     {
-        return await _context.Categories
-            .Include(x => x.Books)
-            .AsNoTracking()
-            .ToListAsync();
+        var connection = await _uow.GetConnectionAsync();
+
+        var categories = (await connection.QueryAsync<Category>(
+            "SELECT CategoryId, CategoryName FROM Categories")).ToList();
+
+        var books = await connection.QueryAsync<Book>(
+            $"SELECT {BookColumns} FROM Books");
+
+        var byCategory = categories.ToDictionary(x => x.CategoryId);
+
+        foreach (var book in books)
+        {
+            if (byCategory.TryGetValue(book.CategoryId, out var category))
+            {
+                category.Books.Add(book);
+            }
+        }
+
+        return categories;
     }
 
     public async Task<Category?> GetByIdAsync(int id)
     {
-        return await _context.Categories
-            .Include(x => x.Books)
-            .FirstOrDefaultAsync(
-                x => x.CategoryId == id);
+        var connection = await _uow.GetConnectionAsync();
+
+        var category = await connection.QueryFirstOrDefaultAsync<Category>(
+            "SELECT CategoryId, CategoryName FROM Categories WHERE CategoryId = @id",
+            new { id });
+
+        if (category == null)
+        {
+            return null;
+        }
+
+        var books = await connection.QueryAsync<Book>(
+            $"SELECT {BookColumns} FROM Books WHERE CategoryId = @id",
+            new { id });
+
+        foreach (var book in books)
+        {
+            category.Books.Add(book);
+        }
+
+        return category;
     }
 
     public async Task AddAsync(Category category)
     {
-        await _context.Categories.AddAsync(category);
+        _uow.Enqueue(async (connection, tx) =>
+        {
+            category.CategoryId = await connection.ExecuteScalarAsync<int>(
+                "INSERT INTO Categories (CategoryName) VALUES (@CategoryName); "
+                + _uow.LastInsertIdQuery,
+                category, tx);
+        });
+
+        await Task.CompletedTask;
     }
 
     public void Update(Category category)
     {
-        _context.Categories.Update(category);
+        _uow.Enqueue((connection, tx) => connection.ExecuteAsync(
+            "UPDATE Categories SET CategoryName = @CategoryName WHERE CategoryId = @CategoryId",
+            category, tx));
     }
 
     public void Delete(Category category)
     {
-        _context.Categories.Remove(category);
+        _uow.Enqueue((connection, tx) => connection.ExecuteAsync(
+            "DELETE FROM Categories WHERE CategoryId = @CategoryId",
+            new { category.CategoryId }, tx));
     }
 
     public async Task SaveChangesAsync()
     {
-        await _context.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 }

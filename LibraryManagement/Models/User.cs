@@ -8,6 +8,8 @@ public class User
 
     public string Email { get; set; } = string.Empty;
 
+    // Never serialized: borrow responses include the Member user.
+    [System.Text.Json.Serialization.JsonIgnore]
     public string PasswordHash { get; set; } = string.Empty;
 
     public string Role { get; set; } = "Member";

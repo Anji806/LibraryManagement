@@ -7,7 +7,6 @@ using LibraryManagement.Services.Implementations;
 using LibraryManagement.Services.Interfaces;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -54,10 +53,17 @@ builder.Services.AddCors(options =>
 // DATABASE
 // ==================================================
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
+// All data access goes through Dapper. EF Core is no longer registered at
+// runtime; ApplicationDbContext remains only for migrations (see
+// Data/DesignTimeDbContextFactory.cs).
+builder.Services.AddSingleton<IDbConnectionFactory>(_ =>
+    new SqlConnectionFactory(
         builder.Configuration.GetConnectionString(
-            "DefaultConnection")));
+            "DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' is missing.")));
+
+builder.Services.AddScoped<IDapperUnitOfWork, DapperUnitOfWork>();
 
 
 // ==================================================

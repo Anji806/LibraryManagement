@@ -8,19 +8,41 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace LibraryManagement.Tests;
 
+public class SqliteConnectionFactory : IDbConnectionFactory
+{
+    private readonly string _connectionString;
+
+    public SqliteConnectionFactory(string connectionString)
+    {
+        _connectionString = connectionString;
+    }
+
+    public System.Data.Common.DbConnection CreateConnection()
+        => new SqliteConnection(_connectionString);
+
+    public string LastInsertIdQuery => "SELECT last_insert_rowid()";
+}
+
 public class LibraryApiFactory : WebApplicationFactory<Program>
 {
-    // A shared open connection keeps the in-memory SQLite DB alive and
-    // enforces the same foreign keys that caused the original 500.
-    private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    // A uniquely named shared-cache in-memory DB lets the EF context (used to
+    // seed data) and the Dapper repositories open their own connections to
+    // the same database. The open connection below keeps it alive; Foreign
+    // Keys=True enforces the same constraints that caused the original 500.
+    private readonly string _connectionString =
+        $"DataSource=file:{Guid.NewGuid():N}?mode=memory&cache=shared;Foreign Keys=True";
+
+    private readonly SqliteConnection _connection;
 
     public LibraryApiFactory()
     {
+        _connection = new SqliteConnection(_connectionString);
         _connection.Open();
     }
 
@@ -53,7 +75,11 @@ public class LibraryApiFactory : WebApplicationFactory<Program>
             }
 
             services.AddDbContext<ApplicationDbContext>(o =>
-                o.UseSqlite(_connection));
+                o.UseSqlite(_connectionString));
+
+            services.RemoveAll<IDbConnectionFactory>();
+            services.AddSingleton<IDbConnectionFactory>(
+                new SqliteConnectionFactory(_connectionString));
 
             using var provider = services.BuildServiceProvider();
             using var scope = provider.CreateScope();

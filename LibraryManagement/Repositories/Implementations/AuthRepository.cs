@@ -1,38 +1,54 @@
-﻿using LibraryManagement.Data;
+using Dapper;
+using LibraryManagement.Data;
 using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
-using Microsoft.EntityFrameworkCore;
 
 namespace LibraryManagement.Repositories.Implementations;
 
 public class AuthRepository : IAuthRepository
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDapperUnitOfWork _uow;
 
-    public AuthRepository(ApplicationDbContext context)
+    public AuthRepository(IDapperUnitOfWork uow)
     {
-        _context = context;
+        _uow = uow;
     }
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        return await _context.Users
-            .FirstOrDefaultAsync(x => x.Email == email);
+        var connection = await _uow.GetConnectionAsync();
+
+        var user = await connection.QueryFirstOrDefaultAsync<User>(
+            UserRepository.SelectUser + " WHERE Email = @email",
+            new { email });
+
+        return user == null ? null : _uow.Track(user);
     }
 
     public async Task<User?> GetByIdAsync(int userId)
     {
-        return await _context.Users
-            .FirstOrDefaultAsync(x => x.UserId == userId);
+        var connection = await _uow.GetConnectionAsync();
+
+        var user = await connection.QueryFirstOrDefaultAsync<User>(
+            UserRepository.SelectUser + " WHERE UserId = @userId",
+            new { userId });
+
+        return user == null ? null : _uow.Track(user);
     }
 
     public async Task AddAsync(User user)
     {
-        await _context.Users.AddAsync(user);
+        _uow.Enqueue(async (connection, tx) =>
+        {
+            user.UserId = await UserRepository.InsertAsync(
+                connection, tx, user, _uow.LastInsertIdQuery);
+        });
+
+        await Task.CompletedTask;
     }
 
     public async Task SaveChangesAsync()
     {
-        await _context.SaveChangesAsync();
+        await _uow.SaveChangesAsync();
     }
 }
