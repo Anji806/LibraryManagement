@@ -1,2 +1,2 @@
 ﻿SELECT *
-FROM dbo.Users;
+FROM dbo.books;

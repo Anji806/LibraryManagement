@@ -61,9 +61,11 @@ public class BookRepository : IBookRepository
         {
             book.BookId = await connection.ExecuteScalarAsync<int>(
                 @"INSERT INTO Books
-                    (Title, ISBN, AuthorId, CategoryId, TotalCopies, AvailableCopies, PublishedYear)
+                    (Title, ISBN, AuthorId, CategoryId, TotalCopies, AvailableCopies, PublishedYear,
+                     PreviewIntroduction, PreviewTheme, PreviewAbstract, PreviewMotto, PreviewWhyRead, CoverUrl)
                   VALUES
-                    (@Title, @ISBN, @AuthorId, @CategoryId, @TotalCopies, @AvailableCopies, @PublishedYear); "
+                    (@Title, @ISBN, @AuthorId, @CategoryId, @TotalCopies, @AvailableCopies, @PublishedYear,
+                     @PreviewIntroduction, @PreviewTheme, @PreviewAbstract, @PreviewMotto, @PreviewWhyRead, @CoverUrl); "
                 + _uow.LastInsertIdQuery,
                 book, tx);
         });
@@ -81,7 +83,13 @@ public class BookRepository : IBookRepository
                 CategoryId = @CategoryId,
                 TotalCopies = @TotalCopies,
                 AvailableCopies = @AvailableCopies,
-                PublishedYear = @PublishedYear
+                PublishedYear = @PublishedYear,
+                PreviewIntroduction = @PreviewIntroduction,
+                PreviewTheme = @PreviewTheme,
+                PreviewAbstract = @PreviewAbstract,
+                PreviewMotto = @PreviewMotto,
+                PreviewWhyRead = @PreviewWhyRead,
+                CoverUrl = @CoverUrl
               WHERE BookId = @BookId",
             book, tx));
     }

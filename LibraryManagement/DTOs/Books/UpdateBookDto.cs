@@ -19,4 +19,22 @@ public class UpdateBookDto
 
     [Range(1, 9999)]
     public int PublishedYear { get; set; }
+
+    [MaxLength(12000)]
+    public string? PreviewIntroduction { get; set; }
+
+    [MaxLength(12000)]
+    public string? PreviewTheme { get; set; }
+
+    [MaxLength(12000)]
+    public string? PreviewAbstract { get; set; }
+
+    [MaxLength(1000)]
+    public string? PreviewMotto { get; set; }
+
+    [MaxLength(3000)]
+    public string? PreviewWhyRead { get; set; }
+
+    [MaxLength(1000)]
+    public string? CoverUrl { get; set; }
 }

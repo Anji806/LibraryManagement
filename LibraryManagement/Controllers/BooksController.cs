@@ -40,7 +40,13 @@ public class BooksController : ControllerBase
             CategoryName = book.Category.CategoryName,
             TotalCopies = book.TotalCopies,
             AvailableCopies = book.AvailableCopies,
-            PublishedYear = book.PublishedYear
+            PublishedYear = book.PublishedYear,
+            PreviewIntroduction = book.PreviewIntroduction,
+            PreviewTheme = book.PreviewTheme,
+            PreviewAbstract = book.PreviewAbstract,
+            PreviewMotto = book.PreviewMotto,
+            PreviewWhyRead = book.PreviewWhyRead,
+            CoverUrl = book.CoverUrl
         });
 
         return Ok(result);
@@ -73,7 +79,13 @@ public class BooksController : ControllerBase
             CategoryName = book.Category.CategoryName,
             TotalCopies = book.TotalCopies,
             AvailableCopies = book.AvailableCopies,
-            PublishedYear = book.PublishedYear
+            PublishedYear = book.PublishedYear,
+            PreviewIntroduction = book.PreviewIntroduction,
+            PreviewTheme = book.PreviewTheme,
+            PreviewAbstract = book.PreviewAbstract,
+            PreviewMotto = book.PreviewMotto,
+            PreviewWhyRead = book.PreviewWhyRead,
+            CoverUrl = book.CoverUrl
         };
 
         return Ok(result);
@@ -116,7 +128,13 @@ public class BooksController : ControllerBase
             CategoryName = book.Category.CategoryName,
             TotalCopies = book.TotalCopies,
             AvailableCopies = book.AvailableCopies,
-            PublishedYear = book.PublishedYear
+            PublishedYear = book.PublishedYear,
+            PreviewIntroduction = book.PreviewIntroduction,
+            PreviewTheme = book.PreviewTheme,
+            PreviewAbstract = book.PreviewAbstract,
+            PreviewMotto = book.PreviewMotto,
+            PreviewWhyRead = book.PreviewWhyRead,
+            CoverUrl = book.CoverUrl
         });
 
         return Ok(result);
@@ -135,7 +153,13 @@ public class BooksController : ControllerBase
             CategoryId = dto.CategoryId,
             TotalCopies = dto.TotalCopies,
             AvailableCopies = dto.TotalCopies,
-            PublishedYear = dto.PublishedYear
+            PublishedYear = dto.PublishedYear,
+            PreviewIntroduction = dto.PreviewIntroduction,
+            PreviewTheme = dto.PreviewTheme,
+            PreviewAbstract = dto.PreviewAbstract,
+            PreviewMotto = dto.PreviewMotto,
+            PreviewWhyRead = dto.PreviewWhyRead,
+            CoverUrl = dto.CoverUrl
         };
 
         await _bookRepository.AddAsync(book);
@@ -187,6 +211,12 @@ public class BooksController : ControllerBase
             dto.TotalCopies - borrowedCopies;
 
         book.PublishedYear = dto.PublishedYear;
+        book.PreviewIntroduction = dto.PreviewIntroduction;
+        book.PreviewTheme = dto.PreviewTheme;
+        book.PreviewAbstract = dto.PreviewAbstract;
+        book.PreviewMotto = dto.PreviewMotto;
+        book.PreviewWhyRead = dto.PreviewWhyRead;
+        book.CoverUrl = dto.CoverUrl;
 
         _bookRepository.Update(book);
 

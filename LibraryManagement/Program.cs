@@ -1,3 +1,4 @@
+
 using LibraryManagement.Data;
 using LibraryManagement.Exceptions;
 using LibraryManagement.Helpers;
@@ -15,20 +16,16 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 // ==================================================
 // CONTROLLERS
 // ==================================================
 
-// Avoid JSON serialization errors caused by reference cycles
-// (e.g., Author -> Books -> Author). Configure the System.Text.Json
-// serializer to ignore cycles when writing responses.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.ReferenceHandler =
+            ReferenceHandler.IgnoreCycles;
     });
-
 
 // ==================================================
 // CORS
@@ -48,51 +45,38 @@ builder.Services.AddCors(options =>
     });
 });
 
-
 // ==================================================
 // DATABASE
 // ==================================================
 
-// All data access goes through Dapper. EF Core is no longer registered at
-// runtime; ApplicationDbContext remains only for migrations (see
-// Data/DesignTimeDbContextFactory.cs).
 builder.Services.AddSingleton<IDbConnectionFactory>(_ =>
     new SqlConnectionFactory(
-        builder.Configuration.GetConnectionString(
-            "DefaultConnection")
+        builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException(
             "Connection string 'DefaultConnection' is missing.")));
 
 builder.Services.AddScoped<IDapperUnitOfWork, DapperUnitOfWork>();
-
 
 // ==================================================
 // REPOSITORIES
 // ==================================================
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
 builder.Services.AddScoped<IBookRepository, BookRepository>();
-
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
-
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 
 builder.Services.AddScoped<
     IBorrowTransactionRepository,
     BorrowTransactionRepository>();
 
-
 // ==================================================
 // SERVICES
 // ==================================================
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-
 builder.Services.AddScoped<IBorrowService, BorrowService>();
-
 
 // ==================================================
 // JWT TOKEN GENERATOR
@@ -100,14 +84,12 @@ builder.Services.AddScoped<IBorrowService, BorrowService>();
 
 builder.Services.AddScoped<JwtTokenGenerator>();
 
-
 // ==================================================
 // JWT AUTHENTICATION
 // ==================================================
 
 builder.Services
-    .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var key = builder.Configuration["Jwt:Key"];
@@ -122,32 +104,23 @@ builder.Services
             new TokenValidationParameters
             {
                 ValidateIssuer = true,
-
                 ValidateAudience = true,
-
                 ValidateLifetime = true,
-
                 ValidateIssuerSigningKey = true,
 
-                ValidIssuer =
-                    builder.Configuration["Jwt:Issuer"],
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
 
-                ValidAudience =
-                    builder.Configuration["Jwt:Audience"],
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(key))
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(key))
             };
     });
-
 
 // ==================================================
 // AUTHORIZATION
 // ==================================================
 
 builder.Services.AddAuthorization();
-
 
 // ==================================================
 // SWAGGER
@@ -162,17 +135,11 @@ builder.Services.AddSwaggerGen(options =>
         new OpenApiSecurityScheme
         {
             Name = "Authorization",
-
             Type = SecuritySchemeType.Http,
-
             Scheme = "bearer",
-
             BearerFormat = "JWT",
-
             In = ParameterLocation.Header,
-
-            Description =
-                "Enter your JWT token. Example: Bearer {your-token}"
+            Description = "Enter your JWT token. Example: Bearer {your-token}"
         });
 
     options.AddSecurityRequirement(
@@ -181,21 +148,16 @@ builder.Services.AddSwaggerGen(options =>
             {
                 new OpenApiSecurityScheme
                 {
-                    Reference =
-                        new OpenApiReference
-                        {
-                            Type =
-                                ReferenceType.SecurityScheme,
-
-                            Id = "Bearer"
-                        }
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
                 },
-
                 Array.Empty<string>()
             }
         });
 });
-
 
 // ==================================================
 // BUILD APPLICATION
@@ -203,6 +165,8 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+await BookPreviewContentInitializer.InitializeAsync(
+    app.Services.GetRequiredService<IDbConnectionFactory>());
 
 // ==================================================
 // SWAGGER
@@ -211,10 +175,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-
     app.UseSwaggerUI();
 }
-
 
 // ==================================================
 // HTTPS
@@ -222,13 +184,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-
 // ==================================================
 // CORS
 // ==================================================
 
-app.UseCors("AllowFrontend");
+app.UseRouting();
 
+app.UseCors("AllowFrontend");
 
 // ==================================================
 // GLOBAL EXCEPTION HANDLER
@@ -236,13 +198,11 @@ app.UseCors("AllowFrontend");
 
 app.UseMiddleware<GlobalExceptionHandler>();
 
-
 // ==================================================
 // AUTHENTICATION
 // ==================================================
 
 app.UseAuthentication();
-
 
 // ==================================================
 // AUTHORIZATION
@@ -250,13 +210,11 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
-
 // ==================================================
 // MAP CONTROLLERS
 // ==================================================
 
 app.MapControllers();
-
 
 // ==================================================
 // RUN APPLICATION

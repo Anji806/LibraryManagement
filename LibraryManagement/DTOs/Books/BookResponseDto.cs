@@ -21,4 +21,16 @@ public class BookResponseDto
     public int AvailableCopies { get; set; }
 
     public int PublishedYear { get; set; }
+
+    public string? PreviewIntroduction { get; set; }
+
+    public string? PreviewTheme { get; set; }
+
+    public string? PreviewAbstract { get; set; }
+
+    public string? PreviewMotto { get; set; }
+
+    public string? PreviewWhyRead { get; set; }
+
+    public string? CoverUrl { get; set; }
 }

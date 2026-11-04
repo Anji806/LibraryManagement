@@ -56,9 +56,27 @@ namespace LibraryManagement.Migrations
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CoverUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ISBN")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PreviewAbstract")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PreviewIntroduction")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PreviewMotto")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PreviewTheme")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PreviewWhyRead")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("PublishedYear")
                         .HasColumnType("int");

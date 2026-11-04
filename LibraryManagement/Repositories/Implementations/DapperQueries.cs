@@ -12,6 +12,7 @@ internal static class DapperQueries
     public const string BookWithRelations = @"
 SELECT b.BookId, b.Title, b.ISBN, b.AuthorId, b.CategoryId,
        b.TotalCopies, b.AvailableCopies, b.PublishedYear,
+       b.PreviewIntroduction, b.PreviewTheme, b.PreviewAbstract, b.PreviewMotto, b.PreviewWhyRead, b.CoverUrl,
        a.AuthorId, a.AuthorName,
        c.CategoryId, c.CategoryName
 FROM Books b
