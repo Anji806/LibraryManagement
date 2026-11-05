@@ -1,52 +1,44 @@
 using Dapper;
+using Microsoft.Data.Sqlite;
 
 namespace LibraryManagement.Data;
 
-/// <summary>
-/// Adds nullable book preview columns through Dapper.
-/// </summary>
+/// <summary>Creates the Dapper application's SQLite schema on first startup.</summary>
 public static class BookPreviewContentInitializer
 {
-    private const string SchemaSql = @"
-IF COL_LENGTH(N'dbo.Books', N'PreviewIntroduction') IS NULL
-    ALTER TABLE dbo.Books ADD PreviewIntroduction nvarchar(max) NULL;
-IF COL_LENGTH(N'dbo.Books', N'PreviewTheme') IS NULL
-    ALTER TABLE dbo.Books ADD PreviewTheme nvarchar(max) NULL;
-IF COL_LENGTH(N'dbo.Books', N'PreviewAbstract') IS NULL
-    ALTER TABLE dbo.Books ADD PreviewAbstract nvarchar(max) NULL;
-IF COL_LENGTH(N'dbo.Books', N'PreviewMotto') IS NULL
-    ALTER TABLE dbo.Books ADD PreviewMotto nvarchar(max) NULL;
-IF COL_LENGTH(N'dbo.Books', N'PreviewWhyRead') IS NULL
-    ALTER TABLE dbo.Books ADD PreviewWhyRead nvarchar(max) NULL;
-IF COL_LENGTH(N'dbo.Books', N'CoverUrl') IS NULL
-    ALTER TABLE dbo.Books ADD CoverUrl nvarchar(max) NULL;
-";
-
-    public static async Task InitializeAsync(IDbConnectionFactory connectionFactory)
+    public static async Task InitializeAsync(
+        IDbConnectionFactory connectionFactory,
+        string contentRootPath)
     {
+        var schemaPath = Path.Combine(contentRootPath, "database", "sqlite_schema.sql");
+        if (!File.Exists(schemaPath))
+            schemaPath = Path.Combine(AppContext.BaseDirectory, "database", "sqlite_schema.sql");
+        if (!File.Exists(schemaPath))
+            throw new FileNotFoundException("SQLite schema script was not found.", schemaPath);
+
         await using var connection = connectionFactory.CreateConnection();
         await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
 
-        if (connection.GetType().FullName?.Contains("SqliteConnection", StringComparison.Ordinal) == true)
+        if (connection is not SqliteConnection)
+            throw new InvalidOperationException("The API requires a SQLite connection.");
+
+        await connection.ExecuteAsync("PRAGMA journal_mode=WAL;");
+        await connection.ExecuteAsync("PRAGMA foreign_keys=ON;");
+        await connection.ExecuteAsync("PRAGMA busy_timeout=30000;");
+        await connection.ExecuteAsync(await File.ReadAllTextAsync(schemaPath));
+        // Upgrade existing installations without replacing or discarding login history.
+        var columns = (await connection.QueryAsync<SchemaColumn>("PRAGMA table_info(LoginHistory);"))
+            .Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!columns.Contains("LogoutDateTime")) await connection.ExecuteAsync("ALTER TABLE LoginHistory ADD COLUMN LogoutDateTime TEXT NULL;");
+        if (!columns.Contains("SessionExpiresAt")) await connection.ExecuteAsync("ALTER TABLE LoginHistory ADD COLUMN SessionExpiresAt TEXT NULL;");
+        if (!columns.Contains("SessionId")) await connection.ExecuteAsync("ALTER TABLE LoginHistory ADD COLUMN SessionId TEXT NULL;");
+        if (!columns.Contains("SessionStatus"))
         {
-            var columns = await connection.QueryAsync<dynamic>("PRAGMA table_info('Books')", transaction: transaction);
-            var existingColumns = columns.Select(column => (string)column.name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var previewColumns = new[]
-            {
-                "PreviewIntroduction", "PreviewTheme", "PreviewAbstract", "PreviewMotto",
-                "PreviewWhyRead", "CoverUrl"
-            };
-
-            foreach (var column in previewColumns.Where(column => !existingColumns.Contains(column)))
-                await connection.ExecuteAsync($"ALTER TABLE Books ADD COLUMN {column} TEXT NULL", transaction: transaction);
-
+            await connection.ExecuteAsync("ALTER TABLE LoginHistory ADD COLUMN SessionStatus TEXT NOT NULL DEFAULT 'Unknown';");
+            await connection.ExecuteAsync("UPDATE LoginHistory SET SessionStatus = CASE WHEN LoginStatus = 'Failed' THEN 'Failed' ELSE 'Unknown' END;");
         }
-        else
-        {
-            await connection.ExecuteAsync(new CommandDefinition(SchemaSql, transaction: transaction));
-        }
-
-        await transaction.CommitAsync();
+        await connection.ExecuteAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_LoginHistory_SessionId ON LoginHistory(SessionId) WHERE SessionId IS NOT NULL;");
     }
+
+    private sealed class SchemaColumn { public string Name { get; set; } = string.Empty; }
 }

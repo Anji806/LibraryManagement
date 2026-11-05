@@ -3,7 +3,7 @@ using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 
 namespace LibraryManagement.Controllers;
 
@@ -262,7 +262,7 @@ public class BooksController : ControllerBase
 
             await _bookRepository.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (DbException)
         {
             // A borrowing may have been created after the check above.
             return Conflict(new

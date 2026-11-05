@@ -1,15 +1,18 @@
 ﻿using System.Net;
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 
 namespace LibraryManagement.Exceptions;
 
 public class GlobalExceptionHandler
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionHandler> _logger;
 
-    public GlobalExceptionHandler(RequestDelegate next)
+    public GlobalExceptionHandler(RequestDelegate next, ILogger<GlobalExceptionHandler> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -39,12 +42,18 @@ public class GlobalExceptionHandler
                 HttpStatusCode.BadRequest,
                 ex.Message);
         }
+        catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+        {
+            _logger.LogWarning(ex, "A database constraint rejected request {Method} {Path}.", context.Request.Method, context.Request.Path);
+            await HandleExceptionAsync(context, HttpStatusCode.Conflict, "The requested change conflicts with existing data.");
+        }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Unhandled error processing {Method} {Path}.", context.Request.Method, context.Request.Path);
             await HandleExceptionAsync(
                 context,
                 HttpStatusCode.InternalServerError,
-               ex.Message);
+                "An unexpected server error occurred.");
         }
     }
 

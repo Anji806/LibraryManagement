@@ -4,7 +4,7 @@ using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 
 namespace LibraryManagement.Controllers;
 
@@ -137,7 +137,7 @@ public async Task<IActionResult> DeleteUser(int id)
 
         return NoContent();
     }
-    catch (DbUpdateException)
+    catch (DbException)
     {
         return Conflict(new
         {

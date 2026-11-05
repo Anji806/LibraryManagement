@@ -15,7 +15,7 @@ public class JwtTokenGenerator
         _configuration = configuration;
     }
 
-    public string GenerateToken(User user)
+    public string GenerateToken(User user, string? sessionId = null)
     {
         var claims = new List<Claim>
         {
@@ -35,6 +35,8 @@ public class JwtTokenGenerator
                 ClaimTypes.Role,
                 user.Role)
         };
+        if (!string.IsNullOrWhiteSpace(sessionId))
+            claims.Add(new Claim(JwtRegisteredClaimNames.Jti, sessionId));
 
         var key = _configuration["Jwt:Key"];
 

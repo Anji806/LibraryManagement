@@ -1,7 +1,6 @@
 using System.Data.Common;
 using LibraryManagement.Models;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.Sqlite;
 
 namespace LibraryManagement.Data;
 
@@ -19,20 +18,20 @@ public interface IDbConnectionFactory
     string LastInsertIdQuery { get; }
 }
 
-public class SqlConnectionFactory : IDbConnectionFactory
+public sealed class SqliteConnectionFactory : IDbConnectionFactory
 {
     private readonly string _connectionString;
 
-    public SqlConnectionFactory(string connectionString)
+    public SqliteConnectionFactory(string connectionString)
     {
         _connectionString = connectionString;
     }
 
     public DbConnection CreateConnection()
-        => new SqlConnection(_connectionString);
+        => new SqliteConnection(_connectionString);
 
     public string LastInsertIdQuery
-        => "SELECT CAST(SCOPE_IDENTITY() AS int)";
+        => "SELECT last_insert_rowid()";
 }
 
 /// <summary>
@@ -125,13 +124,11 @@ public sealed class DapperUnitOfWork : IDapperUnitOfWork, IDisposable
             await work(connection, tx);
             await tx.CommitAsync();
         }
-        catch (DbException ex)
+        catch (DbException)
         {
             await tx.RollbackAsync();
 
-            // Controllers already handle DbUpdateException, so keep raising it.
-            throw new DbUpdateException(
-                "An error occurred while saving the changes.", ex);
+            throw;
         }
     }
 

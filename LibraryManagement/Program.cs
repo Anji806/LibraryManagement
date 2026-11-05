@@ -6,8 +6,10 @@ using LibraryManagement.Repositories.Implementations;
 using LibraryManagement.Repositories.Interfaces;
 using LibraryManagement.Services.Implementations;
 using LibraryManagement.Services.Interfaces;
+using LibraryManagement.Realtime;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -15,6 +17,11 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Write application logs to stdout. The Windows Event Log provider can throw
+// when this process lacks Event Log permissions, masking request failures.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // ==================================================
 // CONTROLLERS
@@ -49,11 +56,18 @@ builder.Services.AddCors(options =>
 // DATABASE
 // ==================================================
 
+var databaseDirectory = Path.Combine(builder.Environment.ContentRootPath, "Data");
+Directory.CreateDirectory(databaseDirectory);
+var configuredConnectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing.");
+var sqliteConnectionString = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(configuredConnectionString);
+if (!Path.IsPathRooted(sqliteConnectionString.DataSource))
+    sqliteConnectionString.DataSource = Path.GetFullPath(sqliteConnectionString.DataSource, builder.Environment.ContentRootPath);
+sqliteConnectionString.ForeignKeys = true;
+sqliteConnectionString.DefaultTimeout = 30;
+
 builder.Services.AddSingleton<IDbConnectionFactory>(_ =>
-    new SqlConnectionFactory(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException(
-            "Connection string 'DefaultConnection' is missing.")));
+    new SqliteConnectionFactory(sqliteConnectionString.ToString()));
 
 builder.Services.AddScoped<IDapperUnitOfWork, DapperUnitOfWork>();
 
@@ -62,6 +76,7 @@ builder.Services.AddScoped<IDapperUnitOfWork, DapperUnitOfWork>();
 // ==================================================
 
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<ILoginHistoryRepository, LoginHistoryRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
@@ -76,6 +91,8 @@ builder.Services.AddScoped<
 // ==================================================
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<ILoginActivityEventBus, LoginActivityEventBus>();
+builder.Services.AddScoped<ILoginHistoryService, LoginHistoryService>();
 builder.Services.AddScoped<IBorrowService, BorrowService>();
 
 // ==================================================
@@ -83,6 +100,7 @@ builder.Services.AddScoped<IBorrowService, BorrowService>();
 // ==================================================
 
 builder.Services.AddScoped<JwtTokenGenerator>();
+builder.Services.AddHttpContextAccessor();
 
 // ==================================================
 // JWT AUTHENTICATION
@@ -165,8 +183,51 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+var trustedProxyAddresses = builder.Configuration
+    .GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+var trustedProxyIps = new HashSet<System.Net.IPAddress>
+{
+    System.Net.IPAddress.Loopback,
+    System.Net.IPAddress.IPv6Loopback
+};
+foreach (var address in trustedProxyAddresses)
+{
+    if (System.Net.IPAddress.TryParse(address, out var proxyAddress))
+        trustedProxyIps.Add(proxyAddress);
+}
+
+static System.Net.IPAddress NormalizeIp(System.Net.IPAddress address)
+    => address.IsIPv4MappedToIPv6 ? address.MapToIPv4() : address;
+
+var forwardedHeaders = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1
+};
+foreach (var proxyAddress in trustedProxyIps)
+{
+    forwardedHeaders.KnownProxies.Add(proxyAddress);
+    if (proxyAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        forwardedHeaders.KnownProxies.Add(proxyAddress.MapToIPv6());
+}
+
+// X-Forwarded-For takes precedence. Accept X-Real-IP only from the directly
+// connected, explicitly trusted proxy and normalize it for ASP.NET middleware.
+app.Use(async (context, next) =>
+{
+    var peer = context.Connection.RemoteIpAddress;
+    var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
+    var hasForwardedFor = !string.IsNullOrWhiteSpace(context.Request.Headers["X-Forwarded-For"].ToString());
+    if (peer is not null && trustedProxyIps.Contains(NormalizeIp(peer)) &&
+        !hasForwardedFor && System.Net.IPAddress.TryParse(realIp, out var clientIp))
+        context.Request.Headers["X-Forwarded-For"] = clientIp.ToString();
+    await next();
+});
+app.UseForwardedHeaders(forwardedHeaders);
+
 await BookPreviewContentInitializer.InitializeAsync(
-    app.Services.GetRequiredService<IDbConnectionFactory>());
+    app.Services.GetRequiredService<IDbConnectionFactory>(),
+    app.Environment.ContentRootPath);
 
 // ==================================================
 // SWAGGER

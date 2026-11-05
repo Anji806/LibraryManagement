@@ -1,4 +1,4 @@
-using Dapper;
+﻿using Dapper;
 using LibraryManagement.Data;
 using LibraryManagement.Models;
 using LibraryManagement.Repositories.Interfaces;
@@ -19,7 +19,7 @@ public class AuthRepository : IAuthRepository
         var connection = await _uow.GetConnectionAsync();
 
         var user = await connection.QueryFirstOrDefaultAsync<User>(
-            UserRepository.SelectUser + " WHERE Email = @email",
+            UserRepository.SelectUser + " WHERE Email = @email COLLATE NOCASE",
             new { email });
 
         return user == null ? null : _uow.Track(user);

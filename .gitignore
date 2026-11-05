@@ -1,4 +1,4 @@
-bin/
+﻿bin/
 obj/
 .vs/
 *.user
@@ -6,3 +6,10 @@ obj/
 .vscode/
 *.log
 .env
+# SQLite application data
+**/Data/*.db
+**/Data/*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm

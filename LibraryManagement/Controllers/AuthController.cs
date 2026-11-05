@@ -1,6 +1,8 @@
 ﻿using LibraryManagement.DTOs.Auth;
 using LibraryManagement.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace LibraryManagement.Controllers;
 
@@ -35,6 +37,16 @@ public class AuthController : ControllerBase
         var result = await _authService.LoginAsync(dto);
 
         return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout([FromServices] ILoginHistoryService history)
+    {
+        var sessionId = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+        if (string.IsNullOrWhiteSpace(sessionId)) return Unauthorized();
+        await history.RecordLogoutAsync(sessionId, DateTime.UtcNow);
+        return NoContent();
     }
 
 }
