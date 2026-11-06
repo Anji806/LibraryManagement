@@ -30,9 +30,14 @@ public class Book
 
     public string? CoverUrl { get; set; }
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? CategoryNames { get; set; }
+
     public Author Author { get; set; } = null!;
 
     public Category Category { get; set; } = null!;
+
+    public ICollection<Category> Categories { get; set; } = new List<Category>();
 
     public ICollection<BorrowTransaction> BorrowTransactions { get; set; }
         = new List<BorrowTransaction>();

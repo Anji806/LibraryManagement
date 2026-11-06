@@ -43,6 +43,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS IX_Books_ISBN ON Books(ISBN COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS IX_Books_AuthorId ON Books(AuthorId);
 CREATE INDEX IF NOT EXISTS IX_Books_CategoryId ON Books(CategoryId);
 
+CREATE TABLE IF NOT EXISTS BookCategories (
+    BookId INTEGER NOT NULL,
+    CategoryId INTEGER NOT NULL,
+    PRIMARY KEY (BookId, CategoryId),
+    CONSTRAINT FK_BookCategories_Books FOREIGN KEY (BookId) REFERENCES Books(BookId) ON DELETE CASCADE,
+    CONSTRAINT FK_BookCategories_Categories FOREIGN KEY (CategoryId) REFERENCES Categories(CategoryId) ON DELETE RESTRICT
+);
+CREATE INDEX IF NOT EXISTS IX_BookCategories_CategoryId ON BookCategories(CategoryId);
+
 CREATE TABLE IF NOT EXISTS BorrowTransactions (
     TransactionId INTEGER PRIMARY KEY AUTOINCREMENT,
     BookId INTEGER NOT NULL,

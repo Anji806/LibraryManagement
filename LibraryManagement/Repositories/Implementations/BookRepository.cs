@@ -68,6 +68,9 @@ public class BookRepository : IBookRepository
                      @PreviewIntroduction, @PreviewTheme, @PreviewAbstract, @PreviewMotto, @PreviewWhyRead, @CoverUrl); "
                 + _uow.LastInsertIdQuery,
                 book, tx);
+            await connection.ExecuteAsync(
+                "INSERT OR IGNORE INTO BookCategories (BookId, CategoryId) VALUES (@BookId, @CategoryId)",
+                new { book.BookId, book.CategoryId }, tx);
         });
 
         await Task.CompletedTask;
@@ -75,8 +78,9 @@ public class BookRepository : IBookRepository
 
     public void Update(Book book)
     {
-        _uow.Enqueue((connection, tx) => connection.ExecuteAsync(
-            @"UPDATE Books SET
+        _uow.Enqueue(async (connection, tx) =>
+        {
+            await connection.ExecuteAsync(@"UPDATE Books SET
                 Title = @Title,
                 ISBN = @ISBN,
                 AuthorId = @AuthorId,
@@ -91,7 +95,11 @@ public class BookRepository : IBookRepository
                 PreviewWhyRead = @PreviewWhyRead,
                 CoverUrl = @CoverUrl
               WHERE BookId = @BookId",
-            book, tx));
+            book, tx);
+            await connection.ExecuteAsync(
+                "INSERT OR IGNORE INTO BookCategories (BookId, CategoryId) VALUES (@BookId, @CategoryId)",
+                new { book.BookId, book.CategoryId }, tx);
+        });
     }
 
     public void Delete(Book book)

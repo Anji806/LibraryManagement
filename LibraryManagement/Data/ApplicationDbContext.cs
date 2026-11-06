@@ -42,9 +42,18 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<Book>()
             .HasOne(x => x.Category)
-            .WithMany(x => x.Books)
+            .WithMany()
             .HasForeignKey(x => x.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Book>()
+            .HasMany(x => x.Categories)
+            .WithMany(x => x.Books)
+            .UsingEntity<Dictionary<string, object>>(
+                "BookCategories",
+                right => right.HasOne<Category>().WithMany().HasForeignKey("CategoryId").OnDelete(DeleteBehavior.Restrict),
+                left => left.HasOne<Book>().WithMany().HasForeignKey("BookId").OnDelete(DeleteBehavior.Cascade),
+                join => join.HasKey("BookId", "CategoryId"));
 
         modelBuilder.Entity<BorrowTransaction>()
             .HasOne(x => x.Book)

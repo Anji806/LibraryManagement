@@ -7,9 +7,6 @@ namespace LibraryManagement.Repositories.Implementations;
 
 public class CategoryRepository : ICategoryRepository
 {
-    private const string BookColumns =
-        "BookId, Title, ISBN, AuthorId, CategoryId, TotalCopies, AvailableCopies, PublishedYear";
-
     private readonly IDapperUnitOfWork _uow;
 
     public CategoryRepository(IDapperUnitOfWork uow)
@@ -24,18 +21,10 @@ public class CategoryRepository : ICategoryRepository
         var categories = (await connection.QueryAsync<Category>(
             "SELECT CategoryId, CategoryName FROM Categories")).ToList();
 
-        var books = await connection.QueryAsync<Book>(
-            $"SELECT {BookColumns} FROM Books");
-
-        var byCategory = categories.ToDictionary(x => x.CategoryId);
-
-        foreach (var book in books)
-        {
-            if (byCategory.TryGetValue(book.CategoryId, out var category))
-            {
-                category.Books.Add(book);
-            }
-        }
+        foreach (var category in categories)
+            category.Books = (await connection.QueryAsync<Book>(
+                $"SELECT b.BookId, b.Title, b.ISBN, b.AuthorId, b.CategoryId, b.TotalCopies, b.AvailableCopies, b.PublishedYear FROM Books b INNER JOIN BookCategories bc ON bc.BookId = b.BookId WHERE bc.CategoryId = @CategoryId",
+                new { category.CategoryId })).ToList();
 
         return categories;
     }
@@ -54,7 +43,7 @@ public class CategoryRepository : ICategoryRepository
         }
 
         var books = await connection.QueryAsync<Book>(
-            $"SELECT {BookColumns} FROM Books WHERE CategoryId = @id",
+            $"SELECT b.BookId, b.Title, b.ISBN, b.AuthorId, b.CategoryId, b.TotalCopies, b.AvailableCopies, b.PublishedYear FROM Books b INNER JOIN BookCategories bc ON bc.BookId = b.BookId WHERE bc.CategoryId = @id",
             new { id });
 
         foreach (var book in books)

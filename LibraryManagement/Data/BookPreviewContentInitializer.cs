@@ -26,6 +26,9 @@ public static class BookPreviewContentInitializer
         await connection.ExecuteAsync("PRAGMA foreign_keys=ON;");
         await connection.ExecuteAsync("PRAGMA busy_timeout=30000;");
         await connection.ExecuteAsync(await File.ReadAllTextAsync(schemaPath));
+        // Upgrade the legacy one-category relationship in place and preserve it.
+        await connection.ExecuteAsync(@"INSERT OR IGNORE INTO BookCategories (BookId, CategoryId)
+            SELECT BookId, CategoryId FROM Books;");
         // Upgrade existing installations without replacing or discarding login history.
         var columns = (await connection.QueryAsync<SchemaColumn>("PRAGMA table_info(LoginHistory);"))
             .Select(column => column.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);

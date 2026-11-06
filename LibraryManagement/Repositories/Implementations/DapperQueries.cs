@@ -13,6 +13,7 @@ internal static class DapperQueries
 SELECT b.BookId, b.Title, b.ISBN, b.AuthorId, b.CategoryId,
        b.TotalCopies, b.AvailableCopies, b.PublishedYear,
        b.PreviewIntroduction, b.PreviewTheme, b.PreviewAbstract, b.PreviewMotto, b.PreviewWhyRead, b.CoverUrl,
+       (SELECT group_concat(c2.CategoryName, ', ') FROM BookCategories bc2 INNER JOIN Categories c2 ON c2.CategoryId = bc2.CategoryId WHERE bc2.BookId = b.BookId) AS CategoryNames,
        a.AuthorId, a.AuthorName,
        c.CategoryId, c.CategoryName
 FROM Books b
@@ -25,6 +26,7 @@ INNER JOIN Categories c ON c.CategoryId = b.CategoryId";
     {
         book.Author = author;
         book.Category = category;
+        book.CategoryNames ??= category.CategoryName;
         return book;
     }
 
@@ -34,6 +36,7 @@ SELECT t.TransactionId, t.BookId, t.MemberId, t.MemberName, t.MemberEmail,
        t.BorrowDate, t.ReturnDate, t.Status,
        b.BookId, b.Title, b.ISBN, b.AuthorId, b.CategoryId,
        b.TotalCopies, b.AvailableCopies, b.PublishedYear,
+       (SELECT group_concat(c2.CategoryName, ', ') FROM BookCategories bc2 INNER JOIN Categories c2 ON c2.CategoryId = bc2.CategoryId WHERE bc2.BookId = b.BookId) AS CategoryNames,
        a.AuthorId, a.AuthorName,
        c.CategoryId, c.CategoryName,
        u.UserId, u.FullName, u.Email, u.PasswordHash, u.Role, u.IsActive, u.Address
@@ -55,6 +58,7 @@ LEFT JOIN Users u ON u.UserId = t.MemberId";
     {
         book.Author = author;
         book.Category = category;
+        book.CategoryNames ??= category.CategoryName;
         transaction.Book = book;
         transaction.Member = member;
         return transaction;
